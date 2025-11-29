@@ -1,0 +1,47 @@
+{
+  "name": "NAH-K",
+  "version": "1.0.0",
+  "description": "Notes app with integrated AutoHotkey manager",
+  "main": "main.js",
+
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win nsis"
+  },
+
+  "build": {
+    "appId": "com.example.nahk",
+
+    "files": [
+      "**/*",
+      "!dist/*",
+      "!build_log.txt"
+    ],
+
+    "win": {
+      "target": "nsis",
+      "icon": "icon.ico"
+    },
+
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "NAH-K",
+      "artifactName": "${productName} Setup ${version}.${ext}"
+    },
+
+    "extraResources": [
+      "./bin/**"
+    ]
+  },
+
+  "author": "",
+  "license": "ISC",
+
+  "devDependencies": {
+    "electron": "^28.0.0",
+    "electron-builder": "^24.9.1"
+  }
+}

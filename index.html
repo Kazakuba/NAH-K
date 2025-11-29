@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>NAH-K</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <div class="title-bar">
+        <span id="app-status">NAH-K</span>
+    </div>
+
+    <div class="container">
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h3>EXPLORER</h3>
+                <div class="actions">
+                    <button id="new-file-btn" title="New Note">📄</button>
+                    <button id="new-folder-btn" title="New Folder">📁</button>
+                    <button id="ahk-btn" title="Edit Hotkeys">⚡</button>
+                </div>
+            </div>
+
+            <div id="file-list" class="file-list">
+            </div>
+
+            <div class="sidebar-footer">
+                <div class="ahk-indicator">
+                    AHK: <span id="ahk-status-text">...</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="editor-header">
+                <input type="text" id="current-filename" readonly value="Select a file...">
+                <span id="ahk-save-status" class="save-status" style="display: none;">Saved</span>
+            </div>
+            <textarea id="editor" placeholder="Start typing..."></textarea>
+        </div>
+    </div>
+
+    <!-- Custom Input Modal -->
+    <div id="input-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <h3 id="modal-title">Enter Name</h3>
+            <input type="text" id="modal-input" placeholder="Name...">
+            <div class="modal-actions">
+                <button id="modal-cancel">Cancel</button>
+                <button id="modal-confirm">Create</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="renderer.js"></script>
+</body>
+
+</html>

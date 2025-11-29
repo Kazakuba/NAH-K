@@ -1,0 +1,4 @@
+﻿dist
+node_modules
+package-lock.json
+build_log.txt
