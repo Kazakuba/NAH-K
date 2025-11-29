@@ -236,9 +236,9 @@ app.whenReady().then(() => {
     const ahkFile = path.join(NOTES_DIR, 'MyHotkeys.ahk');
     if (!fs.existsSync(ahkFile)) {
         const defaultAHK = `
-        #SingleInstance Force
-        
-        Use SendMode "Event" OR SendText()`;
+^1::SendEvent("Walking through quiet streets under a bruised violet sky, I thought about how tiny choices—paused steps, unsent messages, half-spoken truths—slowly stack into a life that only makes sense from a distance.")
+^2::SendText("She rearranged the cluttered desk, hoping aligned notebooks and coffee mugs might somehow untangle the knotted timeline of missed chances and delayed dreams.")
+^3::Send("As the train rattled past flickering lights full of screen-lit strangers, he realized the real movement came not from the cars but from the shifting hopes each traveler carried.")`;
         fs.writeFileSync(ahkFile, defaultAHK);
         fs.writeFileSync(AHK_SCRIPT_PATH, defaultAHK);
     }
