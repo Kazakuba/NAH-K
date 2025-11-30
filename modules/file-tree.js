@@ -259,6 +259,9 @@ function handleRename(node, element = null) {
 }
 
 function enableInlineRename(node, textSpan) {
+    const treeItem = textSpan.closest('.tree-item');
+    if (treeItem) treeItem.draggable = false;
+
     const currentName = node.name.endsWith('.md') ? node.name.slice(0, -3) : node.name;
     const input = document.createElement('input');
     input.type = 'text';
@@ -274,6 +277,8 @@ function enableInlineRename(node, textSpan) {
     const commit = () => {
         if (isCommitted) return;
         isCommitted = true;
+
+        if (treeItem) treeItem.draggable = true;
 
         const newName = input.value.trim();
         input.removeEventListener('blur', onBlur);
@@ -293,6 +298,9 @@ function enableInlineRename(node, textSpan) {
     const cancel = () => {
         if (isCommitted) return;
         isCommitted = true;
+
+        if (treeItem) treeItem.draggable = true;
+
         input.removeEventListener('blur', onBlur);
         input.removeEventListener('keydown', onKeyDown);
         input.replaceWith(textSpan);
