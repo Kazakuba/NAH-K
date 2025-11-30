@@ -1,7 +1,7 @@
 import { elements } from './dom.js';
 import { state } from './state.js';
 import { openFile, saveCurrentFile, loadAhkHotstrings } from './editor.js';
-import { showModal } from './modal.js';
+import { showModal, showConfirmModal } from './modal.js';
 
 export async function loadFileList() {
     try {
@@ -57,7 +57,8 @@ function renderTree(nodes, container) {
             } else {
                 state.selectedFolder = node.path;
                 state.currentFilePath = null;
-                elements.filenameDisplay.value = '';
+                elements.filenameDisplay.value = node.name;
+                if (elements.filenameDisplay.resize) elements.filenameDisplay.resize();
                 elements.editor.value = '';
                 elements.editor.placeholder = 'Start typing to create a new note in this folder...';
 
@@ -74,17 +75,13 @@ function renderTree(nodes, container) {
         content.addEventListener('contextmenu', (e) => {
             e.preventDefault();
             e.stopPropagation();
-            showContextMenu(e.pageX, e.pageY, node);
+            showContextMenu(e.pageX, e.pageY, node, text);
         });
 
         content.addEventListener('dblclick', (e) => {
             e.stopPropagation();
             console.log("Double click detected on", node.name);
-            if (node.type === 'file') {
-                handleRename(node);
-            } else {
-                handleRename(node);
-            }
+            handleRename(node, text);
         });
 
         itemDiv.addEventListener('dragstart', (e) => {
@@ -200,9 +197,11 @@ function renderTree(nodes, container) {
 }
 
 let contextMenuTarget = null;
+let contextMenuElement = null;
 
-function showContextMenu(x, y, node) {
+function showContextMenu(x, y, node, element) {
     contextMenuTarget = node;
+    contextMenuElement = element;
     elements.contextMenu.style.display = 'block';
     elements.contextMenu.style.left = `${x}px`;
     elements.contextMenu.style.top = `${y}px`;
@@ -211,29 +210,41 @@ function showContextMenu(x, y, node) {
 function hideContextMenu() {
     elements.contextMenu.style.display = 'none';
     contextMenuTarget = null;
+    contextMenuElement = null;
 }
 
 async function handleDelete() {
     console.log("handleDelete called", contextMenuTarget);
     if (!contextMenuTarget) return;
-    if (confirm(`Are you sure you want to delete "${contextMenuTarget.name}"?`)) {
-        const success = await window.electronAPI.deleteFile(contextMenuTarget.path);
-        if (success) {
-            if (state.currentFilePath === contextMenuTarget.path) {
-                state.currentFilePath = null;
-                elements.editor.value = '';
-                elements.filenameDisplay.value = '';
+
+    const targetNode = contextMenuTarget;
+
+    showConfirmModal(`Are you sure you want to delete "${targetNode.name}"?`, async (confirmed) => {
+        if (confirmed) {
+            const success = await window.electronAPI.deleteFile(targetNode.path);
+            if (success) {
+                if (state.currentFilePath === targetNode.path) {
+                    state.currentFilePath = null;
+                    elements.editor.value = '';
+                    elements.filenameDisplay.value = '';
+                }
+                loadFileList();
+            } else {
+                alert("Failed to delete item.");
             }
-            loadFileList();
-        } else {
-            alert("Failed to delete item.");
         }
-    }
+    }, 'Delete');
     hideContextMenu();
 }
 
-function handleRename(node) {
+function handleRename(node, element = null) {
     console.log("handleRename called", node);
+
+    if (element) {
+        enableInlineRename(node, element);
+        return;
+    }
+
     const currentName = node.name.endsWith('.md') ? node.name.slice(0, -3) : node.name;
 
     showModal(`Rename ${currentName}`, (newName) => {
@@ -245,6 +256,67 @@ function handleRename(node) {
             performRename(node.path, finalName);
         }
     });
+}
+
+function enableInlineRename(node, textSpan) {
+    const currentName = node.name.endsWith('.md') ? node.name.slice(0, -3) : node.name;
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.value = currentName;
+    input.className = 'rename-input';
+
+    textSpan.replaceWith(input);
+    input.focus();
+    input.select();
+
+    let isCommitted = false;
+
+    const commit = () => {
+        if (isCommitted) return;
+        isCommitted = true;
+
+        const newName = input.value.trim();
+        input.removeEventListener('blur', onBlur);
+        input.removeEventListener('keydown', onKeyDown);
+
+        if (newName && newName !== currentName) {
+            let finalName = newName;
+            if (node.type === 'file' && !finalName.endsWith('.md') && !finalName.endsWith('.ahk')) {
+                finalName += '.md';
+            }
+            performRename(node.path, finalName);
+        } else {
+            input.replaceWith(textSpan);
+        }
+    };
+
+    const cancel = () => {
+        if (isCommitted) return;
+        isCommitted = true;
+        input.removeEventListener('blur', onBlur);
+        input.removeEventListener('keydown', onKeyDown);
+        input.replaceWith(textSpan);
+    };
+
+    const onBlur = () => {
+        commit();
+    };
+
+    const onKeyDown = (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            commit();
+        } else if (e.key === 'Escape') {
+            e.preventDefault();
+            cancel();
+        }
+    };
+
+    input.addEventListener('blur', onBlur);
+    input.addEventListener('keydown', onKeyDown);
+    input.addEventListener('click', (e) => e.stopPropagation());
+    input.addEventListener('dblclick', (e) => e.stopPropagation());
+    input.addEventListener('dragstart', (e) => e.preventDefault());
 }
 
 async function performRename(oldPath, newName) {
@@ -278,7 +350,7 @@ export function setupFileTreeListeners() {
             e.stopPropagation();
             console.log("ctxRename clicked");
             if (contextMenuTarget) {
-                handleRename(contextMenuTarget);
+                handleRename(contextMenuTarget, contextMenuElement);
                 hideContextMenu();
             }
         });

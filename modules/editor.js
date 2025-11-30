@@ -223,33 +223,39 @@ export function setupEditorListeners() {
 }
 
 async function renameCurrentFile() {
-    if (!state.currentFilePath) return;
+    const targetPath = state.currentFilePath || state.selectedFolder;
+    if (!targetPath) return;
 
     const newName = elements.filenameDisplay.value.trim();
+    const originalName = targetPath.split(/[\\/]/).pop();
+    const isFile = !!state.currentFilePath;
+
     if (!newName) {
-        const originalName = state.currentFilePath.split(/[\\/]/).pop();
-        const displayName = originalName.endsWith('.md') ? originalName.slice(0, -3) : originalName;
+        const displayName = (isFile && originalName.endsWith('.md')) ? originalName.slice(0, -3) : originalName;
         elements.filenameDisplay.value = displayName;
         if (elements.filenameDisplay.resize) elements.filenameDisplay.resize();
         return;
     }
 
-    const originalName = state.currentFilePath.split(/[\\/]/).pop();
-    const currentDisplayName = originalName.endsWith('.md') ? originalName.slice(0, -3) : originalName;
+    const currentDisplayName = (isFile && originalName.endsWith('.md')) ? originalName.slice(0, -3) : originalName;
 
     if (newName === currentDisplayName) return;
 
     let finalName = newName;
-    if (state.currentFilePath.endsWith('.md') && !finalName.endsWith('.md')) {
+    if (isFile && targetPath.endsWith('.md') && !finalName.endsWith('.md')) {
         finalName += '.md';
     }
 
-    const newPath = await window.electronAPI.renameFile(state.currentFilePath, finalName);
+    const newPath = await window.electronAPI.renameFile(targetPath, finalName);
     if (newPath) {
-        state.currentFilePath = newPath;
+        if (isFile) {
+            state.currentFilePath = newPath;
+        } else {
+            state.selectedFolder = newPath;
+        }
         loadFileList();
     } else {
-        alert("Failed to rename file (maybe name exists?).");
+        alert("Failed to rename item (maybe name exists?).");
         elements.filenameDisplay.value = currentDisplayName;
         if (elements.filenameDisplay.resize) elements.filenameDisplay.resize();
     }
