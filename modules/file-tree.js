@@ -58,6 +58,8 @@ function renderTree(nodes, container) {
                 state.selectedFolder = node.path;
                 state.currentFilePath = null;
                 elements.filenameDisplay.value = node.name;
+                elements.filenameDisplay.disabled = false;
+                delete elements.filenameDisplay.dataset.empty;
                 if (elements.filenameDisplay.resize) elements.filenameDisplay.resize();
                 elements.editor.value = '';
                 elements.editor.placeholder = 'Start typing to create a new note in this folder...';
@@ -405,9 +407,12 @@ export function setupFileTreeListeners() {
             state.selectedFolder = null;
             state.currentFilePath = null;
             elements.filenameDisplay.value = '';
+            elements.filenameDisplay.disabled = false;
+            elements.filenameDisplay.dataset.empty = 'true';
             elements.editor.value = '';
-            elements.editor.placeholder = 'Select a file...';
+            elements.editor.placeholder = 'Start typing to create a new note...';
             document.querySelectorAll('.tree-content').forEach(el => el.classList.remove('active'));
+            if (elements.ahkSaveStatus) elements.ahkSaveStatus.style.display = 'none';
         }
     });
 }

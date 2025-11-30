@@ -3,6 +3,12 @@ import { state } from './state.js';
 import { loadFileList } from './file-tree.js';
 
 export async function saveCurrentFile() {
+    if (!state.currentFilePath && elements.editor.value && !state.isCreatingFile) {
+        if (state.creationTimeout) clearTimeout(state.creationTimeout);
+        await createNewNote();
+        return;
+    }
+
     if (state.currentFilePath && elements.editor.value) {
         if (state.saveTimeout) clearTimeout(state.saveTimeout);
 
@@ -23,10 +29,34 @@ export async function saveCurrentFile() {
     }
 }
 
+async function createNewNote() {
+    state.isCreatingFile = true;
+
+    const firstLine = elements.editor.value.split('\n')[0].trim();
+    let filename = firstLine.replace(/[^a-z0-9 \-_]/gi, '').substring(0, 50) || "Untitled";
+    filename += ".md";
+
+    try {
+        const createdPath = await window.electronAPI.createFile(state.selectedFolder, filename);
+        state.currentFilePath = createdPath;
+        elements.filenameDisplay.value = filename;
+
+        await window.electronAPI.saveFile(state.currentFilePath, elements.editor.value);
+        await loadFileList();
+        state.isCreatingFile = false;
+    } catch (err) {
+        console.error("Error creating file:", err);
+        alert("Failed to create file");
+        state.isCreatingFile = false;
+    }
+}
+
 export async function openFile(filepath, filename) {
     state.currentFilePath = filepath;
     const displayName = filename.endsWith('.md') ? filename.slice(0, -3) : filename;
     elements.filenameDisplay.value = displayName;
+    elements.filenameDisplay.disabled = false;
+    delete elements.filenameDisplay.dataset.empty;
     elements.filenameDisplay.readOnly = false;
     if (elements.filenameDisplay.resize) elements.filenameDisplay.resize();
     elements.editor.placeholder = 'Start typing...';
@@ -114,30 +144,12 @@ export function setupEditorListeners() {
 
         handleAhkExpansion(e);
 
-        if (!state.currentFilePath && state.selectedFolder && elements.editor.value && !state.isCreatingFile) {
+        if (!state.currentFilePath && elements.editor.value && !state.isCreatingFile) {
             if (state.creationTimeout) clearTimeout(state.creationTimeout);
 
             state.creationTimeout = setTimeout(async () => {
-                state.isCreatingFile = true;
-
-                const firstLine = elements.editor.value.split('\n')[0].trim();
-                let filename = firstLine.replace(/[^a-z0-9 \-_]/gi, '').substring(0, 50) || "Untitled";
-                filename += ".md";
-
-                try {
-                    const createdPath = await window.electronAPI.createFile(state.selectedFolder, filename);
-                    state.currentFilePath = createdPath;
-                    elements.filenameDisplay.value = filename;
-
-                    await window.electronAPI.saveFile(state.currentFilePath, elements.editor.value);
-                    await loadFileList();
-                    state.isCreatingFile = false;
-                } catch (err) {
-                    console.error("Error creating file:", err);
-                    alert("Failed to create file");
-                    state.isCreatingFile = false;
-                }
-            }, 1000);
+                await createNewNote();
+            }, 500);
             return;
         }
 

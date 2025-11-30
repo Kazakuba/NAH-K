@@ -1,6 +1,6 @@
 {
   "name": "NAH-K",
-  "version": "3.0.0",
+  "version": "4.0.0",
   "description": "Notes app with integrated AutoHotkey manager",
   "main": "main.js",
 
