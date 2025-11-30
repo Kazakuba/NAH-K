@@ -215,6 +215,37 @@ ipcMain.handle('save-order', async (event, folderPath, orderList) => {
     return true;
 });
 
+ipcMain.handle('delete-file', async (event, filepath) => {
+    try {
+        if (fs.existsSync(filepath)) {
+            const stat = fs.statSync(filepath);
+            if (stat.isDirectory()) {
+                fs.rmSync(filepath, { recursive: true, force: true });
+            } else {
+                fs.unlinkSync(filepath);
+            }
+            return true;
+        }
+    } catch (err) {
+        console.error("Delete error:", err);
+        return false;
+    }
+    return false;
+});
+
+ipcMain.handle('rename-file', async (event, oldPath, newName) => {
+    try {
+        const dir = path.dirname(oldPath);
+        const newPath = path.join(dir, newName);
+        if (fs.existsSync(newPath)) return false; // Prevent overwrite
+        fs.renameSync(oldPath, newPath);
+        return newPath;
+    } catch (err) {
+        console.error("Rename error:", err);
+        return null;
+    }
+});
+
 const gotLock = app.requestSingleInstanceLock();
 
 if (!gotLock) {

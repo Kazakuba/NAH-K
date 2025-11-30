@@ -1,6 +1,7 @@
 import { elements } from './dom.js';
 import { state } from './state.js';
 import { openFile, saveCurrentFile, loadAhkHotstrings } from './editor.js';
+import { showModal } from './modal.js';
 
 export async function loadFileList() {
     try {
@@ -37,7 +38,7 @@ function renderTree(nodes, container) {
         icon.textContent = node.type === 'folder' ? '📁' : '📄';
 
         const text = document.createElement('span');
-        text.textContent = node.name;
+        text.textContent = node.name.endsWith('.md') ? node.name.slice(0, -3) : node.name;
 
         content.appendChild(icon);
         content.appendChild(text);
@@ -69,6 +70,22 @@ function renderTree(nodes, container) {
                 }
             }
         };
+
+        content.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            showContextMenu(e.pageX, e.pageY, node);
+        });
+
+        content.addEventListener('dblclick', (e) => {
+            e.stopPropagation();
+            console.log("Double click detected on", node.name);
+            if (node.type === 'file') {
+                handleRename(node);
+            } else {
+                handleRename(node);
+            }
+        });
 
         itemDiv.addEventListener('dragstart', (e) => {
             e.stopPropagation();
@@ -182,11 +199,96 @@ function renderTree(nodes, container) {
     });
 }
 
+let contextMenuTarget = null;
+
+function showContextMenu(x, y, node) {
+    contextMenuTarget = node;
+    elements.contextMenu.style.display = 'block';
+    elements.contextMenu.style.left = `${x}px`;
+    elements.contextMenu.style.top = `${y}px`;
+}
+
+function hideContextMenu() {
+    elements.contextMenu.style.display = 'none';
+    contextMenuTarget = null;
+}
+
+async function handleDelete() {
+    console.log("handleDelete called", contextMenuTarget);
+    if (!contextMenuTarget) return;
+    if (confirm(`Are you sure you want to delete "${contextMenuTarget.name}"?`)) {
+        const success = await window.electronAPI.deleteFile(contextMenuTarget.path);
+        if (success) {
+            if (state.currentFilePath === contextMenuTarget.path) {
+                state.currentFilePath = null;
+                elements.editor.value = '';
+                elements.filenameDisplay.value = '';
+            }
+            loadFileList();
+        } else {
+            alert("Failed to delete item.");
+        }
+    }
+    hideContextMenu();
+}
+
+function handleRename(node) {
+    console.log("handleRename called", node);
+    const currentName = node.name.endsWith('.md') ? node.name.slice(0, -3) : node.name;
+
+    showModal(`Rename ${currentName}`, (newName) => {
+        if (newName && newName !== currentName) {
+            let finalName = newName;
+            if (node.type === 'file' && !finalName.endsWith('.md') && !finalName.endsWith('.ahk')) {
+                finalName += '.md';
+            }
+            performRename(node.path, finalName);
+        }
+    });
+}
+
+async function performRename(oldPath, newName) {
+    const newPath = await window.electronAPI.renameFile(oldPath, newName);
+    if (newPath) {
+        if (state.currentFilePath === oldPath) {
+            state.currentFilePath = newPath;
+            elements.filenameDisplay.value = newName;
+        }
+        loadFileList();
+    } else {
+        alert("Failed to rename item (maybe name exists?).");
+    }
+}
+
 export function setupFileTreeListeners() {
+    document.addEventListener('click', () => {
+        hideContextMenu();
+    });
+
+    if (elements.ctxDelete) {
+        elements.ctxDelete.addEventListener('click', (e) => {
+            e.stopPropagation();
+            console.log("ctxDelete clicked");
+            handleDelete();
+        });
+    }
+
+    if (elements.ctxRename) {
+        elements.ctxRename.addEventListener('click', (e) => {
+            e.stopPropagation();
+            console.log("ctxRename clicked");
+            if (contextMenuTarget) {
+                handleRename(contextMenuTarget);
+                hideContextMenu();
+            }
+        });
+    }
+
     elements.fileList.addEventListener('dragover', (e) => {
         e.preventDefault();
         elements.fileList.classList.add('drag-over-root');
     });
+
 
     elements.fileList.addEventListener('dragleave', () => {
         elements.fileList.classList.remove('drag-over-root');

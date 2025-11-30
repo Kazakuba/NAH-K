@@ -11,5 +11,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     moveEntry: (oldPath, newFolderPath) => ipcRenderer.invoke('move-entry', oldPath, newFolderPath),
     saveOrder: (folderPath, orderList) => ipcRenderer.invoke('save-order', folderPath, orderList),
 
+    deleteFile: (path) => ipcRenderer.invoke('delete-file', path),
+    renameFile: (oldPath, newName) => ipcRenderer.invoke('rename-file', oldPath, newName),
+
     onAhkStatus: (callback) => ipcRenderer.on('ahk-status', (_event, value) => callback(value))
 });

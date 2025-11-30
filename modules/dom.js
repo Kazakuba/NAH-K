@@ -11,5 +11,8 @@ export const elements = {
     modalTitle: document.getElementById('modal-title'),
     modalInput: document.getElementById('modal-input'),
     modalConfirm: document.getElementById('modal-confirm'),
-    modalCancel: document.getElementById('modal-cancel')
+    modalCancel: document.getElementById('modal-cancel'),
+    contextMenu: document.getElementById('context-menu'),
+    ctxRename: document.getElementById('ctx-rename'),
+    ctxDelete: document.getElementById('ctx-delete')
 };

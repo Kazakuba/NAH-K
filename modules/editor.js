@@ -25,7 +25,10 @@ export async function saveCurrentFile() {
 
 export async function openFile(filepath, filename) {
     state.currentFilePath = filepath;
-    elements.filenameDisplay.value = filename;
+    const displayName = filename.endsWith('.md') ? filename.slice(0, -3) : filename;
+    elements.filenameDisplay.value = displayName;
+    elements.filenameDisplay.readOnly = false;
+    if (elements.filenameDisplay.resize) elements.filenameDisplay.resize();
     elements.editor.placeholder = 'Start typing...';
 
     const content = await window.electronAPI.readFile(filepath);
@@ -191,4 +194,63 @@ export function setupEditorListeners() {
             }
         }
     });
+
+    // Editable Title Logic
+    const resizeTitle = () => {
+        const span = document.createElement('span');
+        span.style.font = window.getComputedStyle(elements.filenameDisplay).font;
+        span.style.visibility = 'hidden';
+        span.style.position = 'absolute';
+        span.textContent = elements.filenameDisplay.value || elements.filenameDisplay.placeholder;
+        document.body.appendChild(span);
+        elements.filenameDisplay.style.width = `${span.offsetWidth + 20}px`;
+        document.body.removeChild(span);
+    };
+
+    elements.filenameDisplay.addEventListener('input', resizeTitle);
+    elements.filenameDisplay.resize = resizeTitle;
+
+    elements.filenameDisplay.addEventListener('blur', () => {
+        renameCurrentFile();
+    });
+
+    elements.filenameDisplay.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            elements.filenameDisplay.blur();
+        }
+    });
+}
+
+async function renameCurrentFile() {
+    if (!state.currentFilePath) return;
+
+    const newName = elements.filenameDisplay.value.trim();
+    if (!newName) {
+        const originalName = state.currentFilePath.split(/[\\/]/).pop();
+        const displayName = originalName.endsWith('.md') ? originalName.slice(0, -3) : originalName;
+        elements.filenameDisplay.value = displayName;
+        if (elements.filenameDisplay.resize) elements.filenameDisplay.resize();
+        return;
+    }
+
+    const originalName = state.currentFilePath.split(/[\\/]/).pop();
+    const currentDisplayName = originalName.endsWith('.md') ? originalName.slice(0, -3) : originalName;
+
+    if (newName === currentDisplayName) return;
+
+    let finalName = newName;
+    if (state.currentFilePath.endsWith('.md') && !finalName.endsWith('.md')) {
+        finalName += '.md';
+    }
+
+    const newPath = await window.electronAPI.renameFile(state.currentFilePath, finalName);
+    if (newPath) {
+        state.currentFilePath = newPath;
+        loadFileList();
+    } else {
+        alert("Failed to rename file (maybe name exists?).");
+        elements.filenameDisplay.value = currentDisplayName;
+        if (elements.filenameDisplay.resize) elements.filenameDisplay.resize();
+    }
 }
